@@ -9,9 +9,12 @@ from enum_JOINT import JOINT
 from tqdm import tqdm
 from vectormath import Vector2
 from util import crop_image, generate_heatmap
+from functools import lru_cache
 
 class MPII:
-    def __init__(self, batch_size, task='train'):
+    def __init__(self, batch_size, task='train', shuffle=True):
+        self.task = task
+        self.shuffle = shuffle
         self.mat = scipy.io.loadmat('data/mpii_human_pose_v1_u12_1.mat', squeeze_me = True, struct_as_record=False)
         self.image_num = len(getattr(self.mat['RELEASE'], 'img_train'))
         self.image_path = './data/images/'
@@ -34,15 +37,19 @@ class MPII:
 
     def __next__(self):
         batch_image = self.batch_image_set()
+        if not len(batch_image):
+            self.reset()
+            raise StopIteration
         return self.get_minibatch(batch_image)
+
+    def reset(self):
+        self.cursor = 0
+        if self.shuffle:
+            random.shuffle(self.image_set)
 
     def batch_image_set(self):
         prev_cursor = self.cursor
         self.cursor += self.batch_size
-        if self.cursor > len(self.image_set):
-            self.image_set = random.shuffle(self.image_set)
-            prev_cursor = 0
-            self.cursor = self.batch_size
         return self.image_set[prev_cursor:self.cursor]
 
     def get_minibatch(self, batch_image):
