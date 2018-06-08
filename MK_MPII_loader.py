@@ -1,23 +1,19 @@
 import scipy.io
-import imageio
-import os
 import skimage
 import skimage.io
 import numpy as np
 import random
 from enum_JOINT import JOINT
-from tqdm import tqdm
 from vectormath import Vector2
 from util import crop_image, generate_heatmap
-from functools import lru_cache
 
 class MPII:
-    def __init__(self, batch_size, task='train', shuffle=True):
+    def __init__(self, batch_size, task, shuffle, annotation, images):
         self.task = task
         self.shuffle = shuffle
-        self.mat = scipy.io.loadmat('data/mpii_human_pose_v1_u12_1.mat', squeeze_me = True, struct_as_record=False)
+        self.mat = scipy.io.loadmat(annotation, squeeze_me = True, struct_as_record=False)
         self.image_num = len(getattr(self.mat['RELEASE'], 'img_train'))
-        self.image_path = './data/images/'
+        self.image_path = images
         self.joint_num = len(JOINT)
         self.cursor = 0
         self.image_set = []
