@@ -91,11 +91,9 @@ class MPII:
                 rotate = random.gauss(0, 1) * MPII.ROTATE_FACTOR if random.random() <= 0.4 else 0
 
         hitbox = 200 * scale
-
         objpos = getattr(annorect, 'objpos')
         center = Vector2(getattr(objpos, 'x'), getattr(objpos, 'y'))
-        # ret_image = crop_image(image, center, 256)
-        ret_image = crop_image(image, center, scale, 0.0, 256)
+        ret_image = crop_image(image, center, scale, rotate, 256)
 
         if self.task and self.augmentation:
             ret_image[:, :, 0] *= random.uniform(0.6, 1.4)
