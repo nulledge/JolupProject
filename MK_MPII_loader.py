@@ -1,6 +1,7 @@
 import scipy.io
 import skimage
 import skimage.io
+import math
 import numpy as np
 import random
 from enum_JOINT import JOINT
@@ -8,6 +9,10 @@ from vectormath import Vector2
 from util import crop_image, generate_heatmap
 
 class MPII:
+
+    SCALE_FACTOR = 0.25
+    ROTATE_FACTOR = 30
+
     def __init__(self, batch_size, task, shuffle, annotation, images):
         self.task = task
         self.shuffle = shuffle
@@ -17,6 +22,7 @@ class MPII:
         self.joint_num = len(JOINT)
         self.cursor = 0
         self.image_set = []
+        self.augmentation = True
         self.batch_size = batch_size
 
         for img_idx in range(self.image_num):
@@ -47,6 +53,9 @@ class MPII:
 
                     except Exception as e:
                         pass
+
+        if shuffle:
+            random.shuffle(self.image_set)
 
     def __iter__(self):
         return self
@@ -91,11 +100,23 @@ class MPII:
         image = skimage.img_as_float(skimage.io.imread(image_name))
 
         scale = annorect.scale
-        hitbox = 200 * scale
+        rotate = 0
+        if self.task == 'train':
+            scale *= 1.25
+            if self.augmentation:
+                scale *= 2 ** (random.gauss(0, 1) * MPII.SCALE_FACTOR)
+                rotate = random.gauss(0, 1) * MPII.ROTATE_FACTOR if random.random() <= 0.4 else 0
 
+        hitbox = 200 * scale
         objpos = getattr(annorect, 'objpos')
         center = Vector2(getattr(objpos, 'x'), getattr(objpos, 'y'))
-        ret_image = crop_image(image, center, scale, 0.0, 256)
+        ret_image = crop_image(image, center, scale, rotate, 256)
+
+        if self.task and self.augmentation:
+            ret_image[:, :, 0] *= random.uniform(0.6, 1.4)
+            ret_image[:, :, 1] *= random.uniform(0.6, 1.4)
+            ret_image[:, :, 2] *= random.uniform(0.6, 1.4)
+            ret_image = np.clip(ret_image, 0, 1)
 
         assert ret_image.shape == (256, 256, 3)
 
@@ -108,8 +129,14 @@ class MPII:
         for key_idx in range(keypoints.shape[0]):
             joint_id = keypoints[key_idx].id
             in_rgb = Vector2(keypoints[key_idx].x, keypoints[key_idx].y) # input RGB coordinate.
-            in_heatmap = (in_rgb - center) * 64 / (200 * scale) + Vector2(32, 32)
-            keypoint = in_heatmap
+            in_heatmap = (in_rgb - center) * 64 / hitbox 
+
+            if rotate != 0:
+                cos = math.cos(rotate * math.pi / 180)
+                sin = math.sin(rotate * math.pi / 180)
+                in_heatmap = Vector2(sin * in_heatmap.y + cos * in_heatmap.x, cos * in_heatmap.y - sin * in_heatmap.x)
+
+            keypoint = in_heatmap + Vector2(32, 32)
 
             if min(keypoint) < 0 or max(keypoint) >= 64:
                 continue
