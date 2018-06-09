@@ -24,9 +24,29 @@ class MPII:
                 annorect = getattr(getattr(self.mat['RELEASE'], 'annolist')[img_idx], 'annorect')
                 if type(annorect) is np.ndarray:
                     for r_idx in range(len(annorect)):
-                        self.image_set.append((img_idx, r_idx))
+                        try:
+                            scale = annorect[r_idx].scale
+                            objpos = getattr(annorect[r_idx], 'objpos')
+                            center = Vector2(getattr(objpos, 'x'), getattr(objpos, 'y'))
+                            keypoints = annorect.annopoints.point
+                            shape = keypoints.shape
+
+                            self.image_set.append((img_idx, r_idx))
+
+                        except Exception as e:
+                            pass
                 else:
-                    self.image_set.append((img_idx, -1))
+                    try:
+                        scale = annorect.scale
+                        objpos = getattr(annorect, 'objpos')
+                        center = Vector2(getattr(objpos, 'x'), getattr(objpos, 'y'))
+                        keypoints = annorect.annopoints.point
+                        shape = keypoints.shape
+
+                        self.image_set.append((img_idx, -1))
+
+                    except Exception as e:
+                        pass
 
     def __iter__(self):
         return self
@@ -75,7 +95,6 @@ class MPII:
 
         objpos = getattr(annorect, 'objpos')
         center = Vector2(getattr(objpos, 'x'), getattr(objpos, 'y'))
-        # ret_image = crop_image(image, center, 256)
         ret_image = crop_image(image, center, scale, 0.0, 256)
 
         assert ret_image.shape == (256, 256, 3)

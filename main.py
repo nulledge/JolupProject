@@ -2,19 +2,15 @@ from enum_JOINT import JOINT
 from MK_MPII_loader import MPII
 from model import Model
 
-import datetime
-import imageio
-import json
 import glob
-import numpy as np
 import os
 import tensorflow as tf
 from dotmap import DotMap
 from tqdm import tqdm
 
 config = DotMap()
-config.n_batch = 1
-config.n_stages = 4
+config.n_batch = 4
+config.n_stages = 8
 config.n_features = 256
 config.n_joints = len(JOINT)
 config.n_epoch = 5
@@ -31,10 +27,10 @@ data = MPII(config.n_batch, config.task, config.shuffle, config.annotation.path,
 model = Model(config.n_stages, config.n_features, config.n_joints)
 
 with tf.Session() as sess:
-    start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    # start_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
     # Count training iteration.
-    global_step = tf.Variable(0, trainable=False, name='step')
+    global_step = tf.Variable(0, trainable=False, name='global_step')
 
     with tf.variable_scope('loss'):
         loss = tf.losses.mean_squared_error(
@@ -87,7 +83,10 @@ with tf.Session() as sess:
 
         if not os.path.exists(config.pretrained.path):
             os.makedirs(config.pretrained.path)
-        save_path = saver.save(sess, os.path.join(config.pretrained.path, start_time, '%03d.save' % epoch))
+        save_path = saver.save(sess, os.path.join(config.pretrained.path, '%03d.save' % epoch))
+
+
+
 
 
 # """ Import dependencies.
